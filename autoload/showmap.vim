@@ -125,7 +125,7 @@ function! showmap#autobind(modes)
     for line in rawlines
       " discard mode indicators
       let without_modes = strpart(line, 3)
-      if strpart(without_modes,0,6) ==? '<plug>' 
+      if strpart(without_modes,0,6) ==? '<plug>'
             \ || strpart(without_modes,0,5) ==? '<snr>'
         " ignore mappings not meant to be typed
         continue
@@ -254,15 +254,61 @@ endfun
 " Return 0 = continue, 1 = quit helper (after cleanup)
 function! s:whatis_all(seq, mode)
   let list_comp = s:list_completions(a:seq, a:mode)
+  if (s:show_group_key == 0)
+    for compl in list_comp
+      let map_info  = maparg(a:seq.compl, a:mode, 0, 1)
+      let lhs       = map_info['lhs']
+      let rhs       = map_info['rhs']
+      call s:print_map(a:seq, lhs, rhs)
+      echon "\n"
+    endfor
+    return
+  endif
+
+  let sort_compl = []
   for compl in list_comp
-    let map_info  = maparg(a:seq.compl, a:mode, 0, 1)
-    let lhs       = map_info['lhs']
-    let rhs       = map_info['rhs']
-    call s:print_map(a:seq, lhs, rhs)
-    echon "\n"
+    if len(compl) ==  1
+      call add(sort_compl,compl)
+    elseif len(compl) > 1
+      let i = 0
+      let is_add = 0
+      while i < len(sort_compl)
+        if type(sort_compl[i]) == type([])
+          if sort_compl[i][0][0] == compl[0]
+            call add(sort_compl[i],compl)
+            let is_add = 1
+            break
+          endif
+        endif
+        let i = i + 1
+      endwhile
+      if is_add == 0 | call add(sort_compl,[compl]) |endif
+    endif
+  endfor
+
+  for compl in sort(sort_compl)
+    if type(compl) == type('')
+      let map_info  = maparg(a:seq.compl, a:mode, 0, 1)
+      let lhs       = map_info['lhs']
+      let rhs       = map_info['rhs']
+      call s:print_map(a:seq, lhs, rhs)
+      echon "\n"
+    elseif type(compl) == type([]) && len(compl) == 1
+      let map_info  = maparg(a:seq.compl[0], a:mode, 0, 1)
+      let lhs       = map_info['lhs']
+      let rhs       = map_info['rhs']
+      call s:print_map(a:seq, lhs, rhs)
+      echon "\n"
+    else
+      let map_info  = maparg(a:seq.compl[0], a:mode, 0, 1)
+      let rhs       = map_info['rhs']
+      let lhs = ''
+      for i in compl |let lhs = lhs . ' ' . i[1:] |endfor
+      call s:print_map(a:seq, ' '.compl[0][0].'['.lhs[1:].']', 'GROUP['.rhs.']')
+      echon "\n"
+    endif
   endfor
 endfun
-
 
 " s:print_map {{{2
 " Pretty-print a mapping
@@ -349,7 +395,7 @@ function! s:short_list(seq, mode)
   call s:log2file(printf("short_list(): [%s] [%s]", a:seq, a:mode))
   let lines   = s:list_completions(a:seq, a:mode)
   let caption = join(lines, s:list_separator)
-  let caplen  = strchars(caption) 
+  let caplen  = strchars(caption)
   let maxlen  = s:cmd_chars_left(a:seq)
   if caplen > maxlen
     if exists('g:showmap_prompt_notruncate')
@@ -390,7 +436,7 @@ endfun
 " s:cmd_chars_left {{{2
 " Return num of remaining chars available for printing on single line of cmd
 function! s:cmd_chars_left(seq)
-  let seqlen = strchars(a:seq) 
+  let seqlen = strchars(a:seq)
   let seplen = strchars(s:prompt_sep)
   let maxlen = &columns - seqlen - seplen - 4
   return maxlen
@@ -413,13 +459,14 @@ function! s:list_completions(seq, mode)
   for line in rawlines
     call s:log2file("  stridx('".line."', '".seq."')")
     let pos = stridx(line, seq)
-    if pos != -1 
+    if pos != -1
       " remaining = lhs without starting seq
       let remaining_lhs_to_eol = strpart(line, pos+strlen(seq))
       let spc_pos              = stridx(remaining_lhs_to_eol, ' ')
       let remaining_lhs        = (spc_pos != -1)
             \ ? strpart(remaining_lhs_to_eol, 0, spc_pos)
             \ : remaining_lhs_to_eol
+      call s:log2file(printf("list_completions()   %s", remaining_lhs))
       call add(lines, remaining_lhs)
     endif
   endfor
@@ -473,7 +520,7 @@ endfun
 " s:log2file {{{2
 " Debug to logfile
 function! s:log2file(msg)
-  if !exists('g:showmap_debug') | return | endif
+  "if !exists('g:showmap_debug') | return | endif
   call writefile(
         \ ['['.strftime("%T").'] '.a:msg],
         \ s:debug_logfile,
@@ -496,6 +543,7 @@ let s:no_errors            = get(g:, 'showmap_no_errors', 0)
 let s:err_timeout          = get(g:, 'showmap_err_timeout', 1)
 let s:autobind_minlen      = get(g:, 'showmap_autobind_minlen', 3)
 let s:sort_list_completion = get(g:, 'showmap_sort_list_completion', 1)
+let s:show_group_key       = get(g:, 'showmap_show_group_key', 0)
 let s:key_quit             = char2nr(s:str2raw(
                               \ get(g:, 'showmap_quit_key',  "<Esc>")))
 let s:key_help             = char2nr(s:str2raw(

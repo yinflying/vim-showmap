@@ -26,8 +26,8 @@ augroup ShowmapGroup
   autocmd VimEnter *
     \  if !exists('g:showmap_no_autobind')
     \|   call showmap#autobind(get(g:, 'showmap_autobind_modes', 'n'))
+    \|   call showmap#autobind(get(g:, 'showmap_autobind_modes', 'v'))
     \| endif
 augroup END
-
 
 " vim: et sw=2:
