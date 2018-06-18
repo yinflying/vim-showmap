@@ -466,7 +466,7 @@ function! s:list_completions(seq, mode)
       let remaining_lhs        = (spc_pos != -1)
             \ ? strpart(remaining_lhs_to_eol, 0, spc_pos)
             \ : remaining_lhs_to_eol
-      call s:log2file(printf("list_completions()   %s", remaining_lhs))
+      "call s:log2file(printf("list_completions()   %s", remaining_lhs))
       call add(lines, remaining_lhs)
     endif
   endfor
@@ -520,7 +520,7 @@ endfun
 " s:log2file {{{2
 " Debug to logfile
 function! s:log2file(msg)
-  "if !exists('g:showmap_debug') | return | endif
+  if !exists('g:showmap_debug') | return | endif
   call writefile(
         \ ['['.strftime("%T").'] '.a:msg],
         \ s:debug_logfile,
